@@ -1,6 +1,6 @@
 {
   "name": "github-typescript",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Build TypeScript scripts and run them via actions/github-script",
   "private": false,
   "keywords": [
@@ -20,17 +20,8 @@
   "bugs": {
     "url": "https://github.com/tkstang/github-typescript/issues"
   },
-  "scripts": {
-    "lint": "biome lint .",
-    "lint:fix": "biome lint --write .",
-    "format": "biome format .",
-    "format:fix": "biome format --write .",
-    "check": "biome check .",
-    "check:fix": "biome check --write ."
-  },
-  "devDependencies": {
-    "@biomejs/biome": "^2.1.1"
-  },
+  "scripts": {},
+  "devDependencies": {},
   "packageManager": "pnpm@10.13.1",
   "engines": {
     "node": ">=22.17.0",

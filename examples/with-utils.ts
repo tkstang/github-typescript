@@ -1,8 +1,8 @@
+// @ts-nocheck - This is an example file, package would be installed by users
 /**
  * Example using github-typescript-utils
  * This demonstrates how to use the utility package with github-typescript
  */
-
 import {
   createStickyComment,
   getRepoInfo,
