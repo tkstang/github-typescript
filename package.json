@@ -1,0 +1,39 @@
+{
+  "name": "github-typescript",
+  "version": "1.0.0",
+  "description": "Build TypeScript scripts and run them via actions/github-script",
+  "private": false,
+  "keywords": [
+    "github-actions",
+    "typescript",
+    "github-script",
+    "composite-action",
+    "esbuild"
+  ],
+  "author": "tkstang",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/tkstang/github-typescript.git"
+  },
+  "homepage": "https://github.com/tkstang/github-typescript#readme",
+  "bugs": {
+    "url": "https://github.com/tkstang/github-typescript/issues"
+  },
+  "scripts": {
+    "lint": "biome lint .",
+    "lint:fix": "biome lint --write .",
+    "format": "biome format .",
+    "format:fix": "biome format --write .",
+    "check": "biome check .",
+    "check:fix": "biome check --write ."
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.1.1"
+  },
+  "packageManager": "pnpm@10.13.1",
+  "engines": {
+    "node": ">=22.17.0",
+    "pnpm": ">=10.13.1"
+  }
+}

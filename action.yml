@@ -1,0 +1,123 @@
+name: github-typescript
+description: Build a TS script and run it via actions/github-script, returning its result
+author: tkstang
+branding:
+  color: purple
+  icon: play
+
+inputs:
+  ts-file:
+    description: Path to the TypeScript entry (relative to working-directory)
+    required: true
+  args:
+    description: JSON string of arguments to pass to your TS default export
+    required: false
+    default: "{}"
+  # mirror github-script input name
+  github-token:
+    description: Custom token to pass to actions/github-script (defaults to github.token)
+    required: false
+  # build controls
+  working-directory:
+    description: Directory to run in
+    required: false
+    default: .
+  node-version:
+    description: Node.js version target for bundling (e.g., 20, 22)
+    required: false
+    default: "22"
+  esbuild-version:
+    description: esbuild version
+    required: false
+    default: "0.24.0"
+
+  # passthroughs to github-script
+  debug:
+    description: Whether to tell the GitHub client to log details of its requests. true or false. Default is to run in debug mode when the GitHub Actions step debug logging is turned on.
+    required: false
+    default: ${{ runner.debug == '1' }}
+  user-agent:
+    description: An optional user-agent string
+    required: false
+    default: "actions/github-script"
+  result-encoding:
+    description: Either "string" or "json" (default "json")—how the result will be encoded
+    required: false
+    default: "json"
+  retries:
+    description: The number of times to retry a request
+    required: false
+    default: "0"
+  retry-exempt-status-codes:
+    description: A comma separated list of status codes that will NOT be retried e.g. "400,500". No effect unless `retries` is set
+    required: false
+    default: "400,401,403,404,422"
+  previews:
+    description: A comma-separated list of GraphQL API previews to accept
+    required: false
+    default: ""
+  base-url:
+    description: An optional GitHub REST API URL to connect to a different GitHub instance. For example, https://my.github-enterprise-server.com/api/v3
+    required: false
+
+outputs:
+  result:
+    description: Encoded result returned by your TS script (from github-script)
+    value: ${{ steps.run.outputs.result }}
+
+runs:
+  using: composite
+  steps:
+    # Cache the final bundle so we skip rebuilds when sources haven't changed
+    - name: Cache bundled output
+      id: bundle-cache
+      uses: actions/cache@v4
+      with:
+        path: ${{ inputs.working-directory }}/.github-script-build
+        key: ts-bundle-${{ runner.os }}-node${{ inputs.node-version }}-esbuild-${{ inputs.esbuild-version }}-${{ hashFiles('**/*.ts', '**/*.tsx', 'package-lock.json', 'pnpm-lock.yaml', 'yarn.lock') }}-${{ inputs.ts-file }}
+
+    - name: Ensure esbuild (fast after first run)
+      if: steps.bundle-cache.outputs.cache-hit != 'true'
+      shell: bash
+      run: npx --yes esbuild@${{ inputs.esbuild-version }} --version
+
+    - name: Build (TypeScript → ESM bundle)
+      id: build
+      if: steps.bundle-cache.outputs.cache-hit != 'true'
+      working-directory: ${{ inputs.working-directory }}
+      shell: bash
+      env:
+        # Allow resolving deps installed at working-directory
+        NODE_PATH: ${{ inputs.working-directory }}/node_modules
+      run: |
+        mkdir -p .github-script-build
+        npx --yes esbuild@${{ inputs.esbuild-version }} \
+          "${{ inputs.ts-file }}" \
+          --bundle \
+          --platform=node \
+          --target=node${{ inputs.node-version }} \
+          --format=esm \
+          --outfile=.github-script-build/out.mjs
+
+    - name: Run with github-script
+      id: run
+      uses: actions/github-script@v8
+      env:
+        SCRIPT_ARGS_JSON: ${{ inputs.args }}
+        BUILT_MODULE: ${{ inputs.working-directory }}/.github-script-build/out.mjs
+      with:
+        # pass through official inputs
+        github-token: ${{ inputs.github-token || github.token }}
+        debug: ${{ inputs.debug }}
+        user-agent: ${{ inputs.user-agent }}
+        result-encoding: ${{ inputs.result-encoding }}
+        retries: ${{ inputs.retries }}
+        retry-exempt-status-codes: ${{ inputs.retry-exempt-status-codes }}
+        previews: ${{ inputs.previews }}
+        base-url: ${{ inputs.base-url }}
+        script: |
+          const mod = await import(process.env.BUILT_MODULE);
+          const run = mod.default ?? mod.run ?? null;
+          if (typeof run !== "function") throw new Error("Built module must export a default async function");
+          const args = JSON.parse(process.env.SCRIPT_ARGS_JSON || "{}");
+          return await run({ core, github, context, args });
