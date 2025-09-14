@@ -104,7 +104,7 @@ runs:
       uses: actions/github-script@v8
       env:
         SCRIPT_ARGS_JSON: ${{ inputs.args }}
-        BUILT_MODULE: ${{ inputs.working-directory }}/.github-script-build/out.mjs
+        BUILT_MODULE: ${{ github.workspace }}/${{ inputs.working-directory }}/.github-script-build/out.mjs
       with:
         # pass through official inputs
         github-token: ${{ inputs.github-token || github.token }}
