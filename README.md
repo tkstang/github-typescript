@@ -38,7 +38,10 @@ jobs:
         with:
           ts-file: .github/scripts/fetch-status.ts
           node-version: '22'
-          args: ${{ toJson({ url: 'https://example.com/health' }) }}
+          args: |
+            {
+              "url": "https://example.com/health"
+            }
 
       - name: Show result
         run: echo '${{ steps.run.outputs.result }}'
@@ -56,7 +59,7 @@ jobs:
 | Name                | Required |    Default | Description                                                                                  |
 | ------------------- | -------- | ---------: | -------------------------------------------------------------------------------------------- |
 | `ts-file`           | ✅       |          — | Path to your TypeScript entry file (relative to `working-directory`).                        |
-| `args`              |          |     `"{}"` | JSON string passed as `args` to your script's default export.                                |
+| `args`              |          |     `"{}"` | JSON string passed as `args` to your script's default export. Use multiline YAML format for complex objects. |
 | `working-directory` |          |      `"."` | Directory where bundling and imports resolve; bundle outputs go to `./.github-script-build`. |
 | `node-version`      |          |     `"22"` | Node target for bundling (affects `esbuild --target=nodeXX`).                                |
 | `esbuild-version`   |          | `"0.24.0"` | esbuild version used to bundle.                                                              |
@@ -211,6 +214,36 @@ Cache key factors:
 
 ## Usage patterns
 
+**Pass static arguments:**
+
+```yaml
+- uses: tkstang/github-typescript@v1
+  with:
+    ts-file: .github/scripts/my-task.ts
+    args: |
+      {
+        "environment": "production",
+        "retries": 3,
+        "endpoints": ["api1", "api2"]
+      }
+```
+
+**Pass dynamic arguments from step outputs:**
+
+```yaml
+- name: Get deployment info
+  id: deploy
+  run: |
+    echo "version=1.2.3" >> $GITHUB_OUTPUT
+    echo "region=us-east-1" >> $GITHUB_OUTPUT
+    echo "config={\"database\":\"prod\",\"replicas\":3}" >> $GITHUB_OUTPUT
+
+- uses: tkstang/github-typescript@v1
+  with:
+    ts-file: .github/scripts/deploy.ts
+    args: '${{ toJson(steps.deploy.outputs) }}'
+```
+
 **Return JSON result:**
 
 ```yaml
@@ -272,6 +305,26 @@ Cache key factors:
 
 - **Cannot find module 'axios'** → ensure you installed deps where `working-directory` can see them and that the wrapper's build step sets `NODE_PATH` accordingly.
 - **`TypeError: run is not a function`** → your script must **default export** a function (`export default async function run(...) {}`).
+- **YAML parsing errors with `args`** → for static objects, use multiline YAML format:
+  ```yaml
+  args: |
+    {
+      "key": "value",
+      "array": ["item1", "item2"]
+    }
+  ```
+  For dynamic values from step outputs or variables, use quoted `toJson()`:
+  ```yaml
+  # Pass all step outputs as an object
+  args: '${{ toJson(steps.previous.outputs) }}'
+
+  # Pass workflow variables
+  args: '${{ toJson(vars) }}'
+
+  # If you need to parse a JSON string first, use fromJson() (but not with toJson())
+  # Example: steps.data.outputs.config = '{"key": "value"}'
+  - run: echo "Key is ${{ fromJson(steps.data.outputs.config).key }}"
+  ```
 - **Output too large** → use artifacts instead of step outputs, or switch `result-encoding` to `string` if you only need a short message.
 - **Cache misses** → narrow `hashFiles(...)` to your scripts subdir and lockfile; keep Node/esbuild versions consistent.
 
