@@ -1,8 +1,8 @@
-name: github-typescript
+name: GitHub Script TypeScript Wrapper
 description: Build a TS script and run it via actions/github-script, returning its result
 author: tkstang
 branding:
-  color: purple
+  color: blue
   icon: play
 
 inputs:

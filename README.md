@@ -4,7 +4,7 @@
 This composite action bundles your external `.ts` files with **esbuild** into a single ESM module and then executes them through `github-script`, returning the result as a step output.
 
 - ✅ Write CI logic in **TypeScript** (great editor DX).
-- ✅ **Bundle** deps (e.g., `axios`, [`github-typescript-utils`](https://www.npmjs.com/package/github-typescript-utils)) — no runtime installs needed after build.
+- ✅ **Bundle** deps (e.g., `axios`, [`github-typescript-utils`](https://www.npmjs.com/package/github-typescript-utils) for GitHub Actions utilities) — no runtime installs needed after build.
 - ✅ **Fast** (esbuild) + optional **bundle caching**.
 - ✅ Mirrors key **`github-script` inputs** like `github-token`, `result-encoding`, `retries`, etc.
 - ✅ Lets you **choose the Node target** for bundling (e.g., 20/22).
@@ -336,7 +336,7 @@ Cache key factors:
 A: No. After bundling, `github-script` imports a single `out.mjs` bundle.
 
 **Q: Can I share common helpers across repos?**
-A: Yes—publish a small ESM utils package (e.g., [`github-typescript-utils`](https://www.npmjs.com/package/github-typescript-utils)) and install it in the repo/sub‑package. The wrapper will bundle it.
+A: Yes—publish a small ESM utils package (e.g., [`github-typescript-utils`](https://www.npmjs.com/package/github-typescript-utils) for GitHub Actions workflow utilities) and install it in the repo/sub‑package. The wrapper will bundle it.
 
 **Q: Does this replace `actions/github-script`?**
 A: No. It wraps it, so you keep Octokit/context ergonomics and its features (retries, result encoding, etc.).
