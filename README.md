@@ -343,6 +343,34 @@ A: No. It wraps it, so you keep Octokit/context ergonomics and its features (ret
 
 ---
 
+## Related Projects
+
+### 📦 github-typescript-utils
+**[NPM](https://www.npmjs.com/package/github-typescript-utils) | [GitHub](https://github.com/tkstang/github-typescript-utils)**
+
+A companion TypeScript utilities package for GitHub Actions workflows. Provides REST API helpers, context utilities, and common workflow functions.
+
+```typescript
+// Example: .github/scripts/pr-manager.ts
+import { getRepoInfo, createStickyComment } from 'github-typescript-utils';
+
+export default async function run({ core, github, context, args }) {
+  const ctx = { core, github, context };
+  const repo = getRepoInfo(ctx);
+
+  await createStickyComment({
+    ctx, repo,
+    issueNumber: context.issue.number,
+    identifier: 'welcome',
+    body: `Welcome! This PR is for ${repo.owner}/${repo.repo}`
+  });
+}
+```
+
+See the [utils README](https://github.com/tkstang/github-typescript-utils#readme) for full usage and installation.
+
+---
+
 ## License
 
 MIT
