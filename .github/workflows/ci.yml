@@ -1,6 +1,13 @@
 name: CI
 
 on:
+  workflow_call:
+    inputs:
+      revision:
+        description: Exact commit to verify when called by release checks
+        required: false
+        type: string
+        default: ""
   push:
     branches: [main]
   pull_request:
@@ -15,11 +22,21 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ inputs.revision || github.sha }}
+          persist-credentials: false
 
       - name: Run actionlint
+        env:
+          ACTIONLINT_VERSION: 1.7.12
+          ACTIONLINT_SHA256: 8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8
         run: |
-          bash <(curl https://raw.githubusercontent.com/rhysd/actionlint/main/scripts/download-actionlint.bash)
+          curl --fail --location --silent --show-error \
+            "https://github.com/rhysd/actionlint/releases/download/v$ACTIONLINT_VERSION/actionlint_${ACTIONLINT_VERSION}_linux_amd64.tar.gz" \
+            --output actionlint.tar.gz
+          printf '%s  actionlint.tar.gz\n' "$ACTIONLINT_SHA256" | sha256sum --check
+          tar --extract --gzip --file actionlint.tar.gz actionlint
           ./actionlint
 
   test-action:
@@ -29,13 +46,16 @@ jobs:
     timeout-minutes: 15
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ inputs.revision || github.sha }}
+          persist-credentials: false
 
       - name: Setup pnpm
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
 
       - name: Setup maintenance Node
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
         with:
           node-version: 26
           cache: pnpm
@@ -45,6 +65,9 @@ jobs:
 
       - name: Check fixture and verification types
         run: pnpm typecheck
+
+      - name: Test release helpers against local bare remotes
+        run: pnpm test:release
 
       - name: Test default export and JSON result
         id: default
