@@ -20,6 +20,8 @@ existing support floors and public input/output contracts unless deliberately ch
 
 - Never commit generated .github-script-build output or dependencies.
 - Pass dynamic Action inputs as quoted environment data in shell steps.
+- Keep executable-selection inputs in trusted workflow configuration; normalize
+  leading-dash entry filenames before passing them to esbuild.
 - Keep fixtures and substantive verification logic in external typed files.
 - Preserve default/named run exports, injected core/github/context/args and failure
   propagation. Use fixed expected outputs rather than recomputing results.

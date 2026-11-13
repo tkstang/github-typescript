@@ -200,7 +200,7 @@ Workflow:
   working-directory: .github/scripts
 ```
 
-> The wrapper sets `NODE_PATH` to `${{ inputs.working-directory }}/node_modules` so esbuild resolves your deps from that location when bundling.
+> The wrapper preserves `NODE_PATH=${{ inputs.working-directory }}/node_modules` for compatibility. esbuild also searches from the importing file. For nested working directories, verify resolution from the actual entry; this variable alone does not prove where dependencies resolve. Install dependencies before invoking the action.
 
 ---
 
@@ -302,6 +302,9 @@ only bundled modules are included in the resulting file.
     pull-requests: write # only if your script needs it
     actions: write # only if touching Actions API
   ```
+- Keep `ts-file`, `working-directory` and `esbuild-version` in trusted workflow configuration. They select executable code, its dependency context and the npm package npx runs. Pin a maintainer-controlled esbuild version; quoting shell arguments does not validate the selected package.
+- Pass event-derived data through `args` and validate it in the script before side effects. Do not use event payloads to select an entry script or build-tool package.
+- Entry filenames beginning with `-` are normalized to a relative path before esbuild, so they are not interpreted as build options.
 - Validate any untrusted input used by your scripts before shelling out.
 - Prefer returning small results; for large payloads, write files and upload artifacts.
 
@@ -317,7 +320,7 @@ only bundled modules are included in the resulting file.
 
 ## Troubleshooting
 
-- **Cannot find module 'axios'** → ensure you installed deps where `working-directory` can see them and that the wrapper's build step sets `NODE_PATH` accordingly.
+- **Cannot find module 'axios'** → install dependencies before invoking the action and verify resolution from the actual entry file and working directory.
 - **Missing callable export** → export a default function or a named `run` function. A present default export takes precedence.
 - **YAML parsing errors with `args`** → for static objects, use multiline YAML format:
   ```yaml

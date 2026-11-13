@@ -53,11 +53,12 @@ jobs:
           ts-file: .github/fixtures/default.ts
           args: '{"message":"Hello from test! $(touch .github-script-args-executed)"}'
 
-      - name: Test named export, literal entry path and string result
+      - name: Test named export, leading-dash literal entry and string result
         id: named
         uses: ./
         with:
-          ts-file: .github/fixtures/literal $(touch .github-script-input-executed).ts
+          working-directory: .github/fixtures
+          ts-file: -literal $(touch .github-script-input-executed).ts
           args: '{"message":"literal string result"}'
           result-encoding: string
 

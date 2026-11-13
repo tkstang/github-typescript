@@ -14,5 +14,5 @@ assert.equal(process.env.NAMED_RESULT, 'literal string result');
 for (const name of ['BUILD_OUTCOME', 'EXPORT_OUTCOME', 'ARGS_OUTCOME', 'SCRIPT_OUTCOME']) {
   assert.equal(process.env[name], 'failure', `${name} must propagate failure`);
 }
-assert.equal(existsSync('.github-script-input-executed'), false);
+assert.equal(existsSync('.github/fixtures/.github-script-input-executed'), false);
 assert.equal(existsSync('.github-script-args-executed'), false);

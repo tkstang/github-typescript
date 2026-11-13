@@ -79,6 +79,7 @@ runs:
         # Keep the caller's dependency-resolution behavior.
         NODE_PATH: ${{ inputs.working-directory }}/node_modules
       run: |
+        case "$TS_FILE" in -*) TS_FILE="./$TS_FILE" ;; esac
         mkdir -p .github-script-build
         npx --yes "esbuild@$ESBUILD_VERSION" \
           "$TS_FILE" \
