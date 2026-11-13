@@ -10,7 +10,7 @@ inputs:
     description: Path to the TypeScript entry (relative to working-directory)
     required: true
   args:
-    description: JSON string of arguments to pass to your TS default export
+    description: JSON string of arguments to pass to your TS function
     required: false
     default: "{}"
   # mirror github-script input name
@@ -68,34 +68,23 @@ outputs:
 runs:
   using: composite
   steps:
-    # Cache the final bundle so we skip rebuilds when sources haven't changed
-    - name: Cache bundled output
-      id: bundle-cache
-      uses: actions/cache@v4
-      with:
-        path: ${{ inputs.working-directory }}/.github-script-build
-        key: ts-bundle-${{ runner.os }}-node${{ inputs.node-version }}-esbuild-${{ inputs.esbuild-version }}-${{ hashFiles('**/*.ts', '**/*.tsx', 'package-lock.json', 'pnpm-lock.yaml', 'yarn.lock') }}-${{ inputs.ts-file }}
-
-    - name: Ensure esbuild (fast after first run)
-      if: steps.bundle-cache.outputs.cache-hit != 'true'
-      shell: bash
-      run: npx --yes esbuild@${{ inputs.esbuild-version }} --version
-
     - name: Build (TypeScript → ESM bundle)
       id: build
-      if: steps.bundle-cache.outputs.cache-hit != 'true'
       working-directory: ${{ inputs.working-directory }}
       shell: bash
       env:
-        # Allow resolving deps installed at working-directory
+        ESBUILD_VERSION: ${{ inputs.esbuild-version }}
+        TS_FILE: ${{ inputs.ts-file }}
+        NODE_TARGET: ${{ inputs.node-version }}
+        # Keep the caller's dependency-resolution behavior.
         NODE_PATH: ${{ inputs.working-directory }}/node_modules
       run: |
         mkdir -p .github-script-build
-        npx --yes esbuild@${{ inputs.esbuild-version }} \
-          "${{ inputs.ts-file }}" \
+        npx --yes "esbuild@$ESBUILD_VERSION" \
+          "$TS_FILE" \
           --bundle \
           --platform=node \
-          --target=node${{ inputs.node-version }} \
+          "--target=node$NODE_TARGET" \
           --format=esm \
           --outfile=.github-script-build/out.mjs
 

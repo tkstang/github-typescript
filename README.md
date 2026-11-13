@@ -4,10 +4,10 @@
 This composite action bundles your external `.ts` files with **esbuild** into a single ESM module and then executes them through `github-script`, returning the result as a step output.
 
 - ✅ Write CI logic in **TypeScript** (great editor DX).
-- ✅ **Bundle** deps (e.g., `axios`, [`github-typescript-utils`](https://www.npmjs.com/package/github-typescript-utils) for GitHub Actions utilities) — no runtime installs needed after build.
-- ✅ **Fast** (esbuild) + optional **bundle caching**.
+- ✅ Bundle supported dependencies such as [`github-typescript-utils`](https://www.npmjs.com/package/github-typescript-utils) after your workflow installs them.
+- ✅ Rebuilds the bundle with **esbuild on every invocation**.
 - ✅ Mirrors key **`github-script` inputs** like `github-token`, `result-encoding`, `retries`, etc.
-- ✅ Lets you **choose the Node target** for bundling (e.g., 20/22).
+- ✅ Lets you choose the JavaScript syntax target for bundling.
 - 🧰 **No hidden setup**: You manage `setup-node` and dependency installs in your workflow (documented patterns below).
 
 ---
@@ -44,11 +44,13 @@ jobs:
             }
 
       - name: Show result
-        run: echo '${{ steps.run.outputs.result }}'
+        env:
+          RESULT: ${{ steps.run.outputs.result }}
+        run: printf '%s\n' "$RESULT"
 ```
 
-> Your script **must** export a default async function:
-> `export default async function run({ core, github, context, args }) { /* ... */ }`
+> Export a default function or a named `run` function. The default export takes
+> precedence when present. Both receive `{ core, github, context, args }`.
 
 ---
 
@@ -59,7 +61,7 @@ jobs:
 | Name                | Required |    Default | Description                                                                                  |
 | ------------------- | -------- | ---------: | -------------------------------------------------------------------------------------------- |
 | `ts-file`           | ✅       |          — | Path to your TypeScript entry file (relative to `working-directory`).                        |
-| `args`              |          |     `"{}"` | JSON string passed as `args` to your script's default export. Use multiline YAML format for complex objects. |
+| `args`              |          |     `"{}"` | JSON string passed as `args` to your script function. Use multiline YAML format for complex objects. |
 | `working-directory` |          |      `"."` | Directory where bundling and imports resolve; bundle outputs go to `./.github-script-build`. |
 | `node-version`      |          |     `"22"` | Node target for bundling (affects `esbuild --target=nodeXX`).                                |
 | `esbuild-version`   |          | `"0.24.0"` | esbuild version used to bundle.                                                              |
@@ -83,13 +85,15 @@ jobs:
 
 | Name     | Description                                                                                 |
 | -------- | ------------------------------------------------------------------------------------------- |
-| `result` | The value returned by your script's default export, encoded according to `result-encoding`. |
+| `result` | The value returned by your script function, encoded according to `result-encoding`. |
 
 Example in a step:
 
 ```yaml
 - name: Show result
-  run: echo '${{ steps.run.outputs.result }}'
+  env:
+    RESULT: ${{ steps.run.outputs.result }}
+  run: printf '%s\n' "$RESULT"
 ```
 
 ---
@@ -200,15 +204,23 @@ Workflow:
 
 ---
 
-## Caching
+## Builds and runtimes
 
-This action can cache the **compiled bundle** to skip rebuilds when source and lockfiles haven't changed. It writes to `${working-directory}/.github-script-build/out.mjs`.
+The action rebuilds `${working-directory}/.github-script-build/out.mjs` on every
+invocation. It does not restore or save a compiled-bundle cache. A previous cache
+key did not include every effective input, such as imported JSON or JavaScript and
+configuration files. Rebuilding avoids reusing that stale output. Your workflow
+may still cache its package-manager download store independently.
 
-Cache key factors:
+`node-version` selects esbuild's JavaScript syntax target. It does not install Node
+or change the runtime that executes the bundle. You configure the shell's Node and
+install dependencies before using this action. The nested `actions/github-script@v8`
+executes with its own Node 24 runtime and requires a compatible Actions runner,
+currently 2.327.1 or newer. A lower syntax target does not polyfill newer Node APIs.
 
-- OS, Node target, esbuild version
-- `hashFiles('**/*.ts', '**/*.tsx', 'package-lock.json', 'pnpm-lock.yaml', 'yarn.lock')`
-- the `ts-file` path
+Bundling removes TypeScript syntax; it does not typecheck your script. Run the
+owning package's checker separately. Dependencies must be installed before bundling;
+only bundled modules are included in the resulting file.
 
 ---
 
@@ -252,7 +264,9 @@ Cache key factors:
   with:
     ts-file: .github/scripts/my-task.ts
     result-encoding: json
-- run: echo "${{ steps.mystep.outputs.result }}"
+- env:
+    RESULT: ${{ steps.mystep.outputs.result }}
+  run: printf '%s\n' "$RESULT"
 ```
 
 **Return string result:**
@@ -304,7 +318,7 @@ Cache key factors:
 ## Troubleshooting
 
 - **Cannot find module 'axios'** → ensure you installed deps where `working-directory` can see them and that the wrapper's build step sets `NODE_PATH` accordingly.
-- **`TypeError: run is not a function`** → your script must **default export** a function (`export default async function run(...) {}`).
+- **Missing callable export** → export a default function or a named `run` function. A present default export takes precedence.
 - **YAML parsing errors with `args`** → for static objects, use multiline YAML format:
   ```yaml
   args: |
@@ -326,14 +340,13 @@ Cache key factors:
   - run: echo "Key is ${{ fromJson(steps.data.outputs.config).key }}"
   ```
 - **Output too large** → use artifacts instead of step outputs, or switch `result-encoding` to `string` if you only need a short message.
-- **Cache misses** → narrow `hashFiles(...)` to your scripts subdir and lockfile; keep Node/esbuild versions consistent.
 
 ---
 
 ## FAQ
 
 **Q: Do I need `node_modules` at runtime?**
-A: No. After bundling, `github-script` imports a single `out.mjs` bundle.
+A: Bundled modules are included in `out.mjs`; built-ins remain runtime-provided. A dependency that loads external files, native modules or dynamic imports may need additional runtime resources. Test the package you actually use.
 
 **Q: Can I share common helpers across repos?**
 A: Yes—publish a small ESM utils package (e.g., [`github-typescript-utils`](https://www.npmjs.com/package/github-typescript-utils) for GitHub Actions workflow utilities) and install it in the repo/sub‑package. The wrapper will bundle it.
@@ -374,3 +387,26 @@ See the [utils README](https://github.com/tkstang/github-typescript-utils#readme
 ## License
 
 MIT
+
+
+## Maintenance checks
+
+Install the pinned maintenance tools and check the committed fixture/script types:
+
+```bash
+pnpm install --frozen-lockfile
+pnpm typecheck
+actionlint
+```
+
+`actionlint` must be installed separately. Maintenance CI uses Node 26; this does
+not change the package's declared Node support floor or the action's default syntax
+target. The checker retains TypeScript 5.8 and Node 22 declarations as a small
+maintenance dependency set.
+
+The `Test Action` CI job executes the local composite action on a GitHub-hosted
+runner. Its checked-in fixtures cover default and named exports, injected context,
+JSON/string outputs, literal shell-looking input and distinct failure boundaries.
+The verification script runs directly with Node after typechecking. It makes no
+GitHub API writes. Local typechecking and workflow linting do not replace this
+runner acceptance test.
