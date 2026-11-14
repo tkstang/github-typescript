@@ -8,8 +8,7 @@ it through actions/github-script. The editable implementation is action.yml;
 
 - Use the packageManager-pinned pnpm: pnpm install --frozen-lockfile.
 - pnpm typecheck checks committed CI fixtures and verification scripts.
-- pnpm test:release runs the native TypeScript release-helper tests on Node 26.
-  Git writes in these tests target disposable local bare remotes only.
+- pnpm test:release checks release helpers on Node 26 with disposable Git remotes.
 - actionlint checks workflows and requires a separately installed binary.
 - The Test Action CI job is the actual composite-action acceptance test. Local
   typechecking does not prove GitHub runner behavior.
@@ -27,13 +26,8 @@ existing support floors and public input/output contracts unless deliberately ch
 - Keep fixtures and substantive verification logic in external typed files.
 - Preserve default/named run exports, injected core/github/context/args and failure
   propagation. Use fixed expected outputs rather than recomputing results.
-- CI is reusable through workflow_call. Release checks must select the validated
-  tagged commit; main/PR checks alone cannot authorize a release.
-- Release tags must be full vX.Y.Z or SemVer prerelease tags matching the package
-  version committed at that revision. Build metadata and floating major tags are
-  unsupported. The helper checks checkout, local tag and remote tag identity.
-- The release helper's update-major command writes to origin. Do not execute it
-  against the real repository, publish releases or move tags without explicit
-  authorization. Preparation tests must use local bare Git fixtures.
-- Keep third-party Actions pinned to reviewed commits. Revalidate their bundled
-  runtimes separately from the shell's Node version when changing pins.
+- Release checks must run reusable CI at the exact tagged commit. Follow the
+  [README release procedure](README.md#release-contract).
+- `update-major` writes to origin. Release tests must use disposable local remotes;
+  real tags and publication require explicit approval.
+- Pin Actions to reviewed commits; check their bundled runtimes when updating pins.
