@@ -1,6 +1,6 @@
 {
   "name": "github-typescript",
-  "version": "1.0.1",
+  "version": "1.0.5",
   "description": "Build TypeScript scripts and run them via actions/github-script",
   "private": false,
   "keywords": [
@@ -21,7 +21,8 @@
     "url": "https://github.com/tkstang/github-typescript/issues"
   },
   "scripts": {
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test:release": "node --test .github/scripts/release.test.ts"
   },
   "devDependencies": {
     "@types/node": "22.17.0",

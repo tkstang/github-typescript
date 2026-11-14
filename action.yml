@@ -91,7 +91,7 @@ runs:
 
     - name: Run with github-script
       id: run
-      uses: actions/github-script@v8
+      uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8
       env:
         SCRIPT_ARGS_JSON: ${{ inputs.args }}
         BUILT_MODULE: ${{ github.workspace }}/${{ inputs.working-directory }}/.github-script-build/out.mjs
