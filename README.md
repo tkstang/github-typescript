@@ -418,43 +418,23 @@ runner acceptance test.
 
 ## Release contract
 
-Release tags use `vX.Y.Z` or `vX.Y.Z-prerelease`, with valid SemVer prerelease
-identifiers. The tag without its `v` prefix must equal `package.json`'s version at
-the tagged commit. Floating tags such as `v1`, malformed versions, leading-zero
-numeric identifiers and build metadata such as `+build` are unsupported.
-Lightweight and annotated full-version tags are supported.
+Use Node 26 and the pinned pnpm for maintenance. After release approval:
 
-The release workflow validates the tag and resolves its commit, then calls the
-same CI workflow used for main and pull requests with that exact commit. Both
-workflow linting and the real composite Action acceptance job must pass. The
-write job revalidates the checkout and the local/remote full-version tag before
-creating a GitHub release. A stable release then updates its major ref, such as
-`v1`, directly to the checked commit with one forced Git ref update. It never
-first deletes that ref. A rejected update leaves the previous remote ref intact
-and fails the job. A prerelease is marked as such and never updates the stable
-major ref.
+1. Fetch `origin/main` and confirm its commit and `package.json` version are approved.
+2. Confirm CI passes, runner support, tag protections and workflow write access.
+3. Push a full version tag with Git, rather than creating a release in the GitHub UI:
 
-`pnpm test:release` checks this helper through its native TypeScript CLI, using
-only disposable local bare Git repositories. It covers tag/version agreement,
-exact checked-commit identity, stable/prerelease behavior and rejected ref updates.
-These tests do not create GitHub releases or exercise real repository write
-permissions. The release job grants `contents: write`; validation and acceptance
-jobs have read-only repository permission.
+   ```bash
+   git tag v1.0.5 origin/main
+   git push origin v1.0.5
+   ```
 
-Preparing metadata and passing CI do not publish a release. Before separately
-approved publication, confirm the intended immutable full-version tag and commit,
-matching package metadata, supported runner/runtime, repository tag protections
-and workflow write permissions. Creating that tag starts its own exact-revision
-checks. No npm publication or registry credential is needed for this Git-based
-composite Action release. If release creation succeeds but the major update is
-rejected, the GitHub release can exist while the major ref still points to the
-previous commit; inspect that job's error before an authorized retry.
+Tags must be `vX.Y.Z` or valid SemVer prereleases matching the committed version.
+Annotated tags work; build metadata and floating tags are not release triggers.
+The workflow checks the exact tagged commit with reusable CI, then revalidates
+before creating the release. Stable releases move the major tag in one update;
+prereleases leave it unchanged. No npm credential is needed.
 
-This repository's executable workflows and composite Action pin third-party
-Actions, including the nested `github-script`, to immutable commits with their
-major labels in comments. The selected `github-script` and
-`setup-node` metadata declare Node 24; the retained checkout, pnpm setup and GitHub
-release Action metadata declare Node 20. Those Action-owned runtimes are separate
-from the Node 26 maintenance shell and this wrapper's default Node 22 syntax
-target. Revalidate runner support before publication. CI downloads actionlint
-1.7.12 from its release archive and verifies the committed SHA-256 before running it.
+Keep the released commit at the main branch tip until the job finishes. If the
+major-tag update fails after release creation, inspect the job before retrying.
+Merging preparation changes does not authorize tags or publication.
